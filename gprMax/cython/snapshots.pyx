@@ -60,6 +60,7 @@ cpdef void calculate_snapshot_fields(
     """
 
     cdef Py_ssize_t i, j, k
+    cdef float_or_double Ex, Ey, Ez
 
     for i in prange(0, nx, nogil=True, schedule='static', num_threads=nthreads):
         for j in range(ny):
