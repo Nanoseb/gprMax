@@ -49,12 +49,10 @@ def save_snapshots(snapshots: List["Snapshot"]):
 
     # Create directory for snapshots
     snapshotdir = config.get_model_config().set_snapshots_dir()
-    snapshotdir.mkdir(exist_ok=True)
     logger.info("")
     logger.info(f"Snapshot directory: {snapshotdir.resolve()}")
 
     for i, snap in enumerate(snapshots):
-        snap.filename = snapshotdir / snap.filename
         pbar = tqdm(
             total=snap.nbytes,
             leave=True,
@@ -244,6 +242,9 @@ class Snapshot(Generic[GridType]):
             pbar: Progress bar class instance.
             G: FDTDGrid class describing a grid in a model.
         """
+        snapshotdir = config.get_model_config().set_snapshots_dir()
+        snapshotdir.mkdir(exist_ok=True)
+        self.filename = snapshotdir / self.filename
 
         if self.fileext == ".vtkhdf":
             self.write_vtk(pbar)
