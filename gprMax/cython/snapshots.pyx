@@ -96,7 +96,7 @@ cpdef void calculate_snapshot_fields(
                           Ezslice[i, j + 1, k] +
                           Ezslice[i + 1, j + 1, k]) / 4
  
-                    magEsnap[i,j,k] = Ex**2 + Ey**2 + Ez**2
+                    magEsnap[i,j,k] = Ex*Ex + Ey*Ey + Ez*Ez
 
                 # The magnetic field component value at a point comes from
                 # average of 2 magnetic field component values in that cell and
