@@ -236,17 +236,7 @@ class Snapshot(Generic[GridType]):
             self.snapfields["Hz"],
         )
 
-    def clean(self):
-        self.snapfields["Ex"] = []
-        self.snapfields["Ey"] = []
-        self.snapfields["Ez"] = []
-        self.snapfields["Hx"] = []
-        self.snapfields["Hy"] = []
-        self.snapfields["Hz"] = []
-        print('snapshot cleaned')
-
-
-    def write_file(self, pbar: tqdm):
+    def write_file(self, pbar: tqdm = tqdm()):
         """Writes snapshot file either as VTK ImageData (.vtkhdf) format
             or HDF5 format (.h5) files
 
@@ -263,7 +253,7 @@ class Snapshot(Generic[GridType]):
         # Free memory after writes
         self.free_memory()
 
-    def write_vtk(self, pbar: tqdm):
+    def write_vtk(self, pbar: tqdm = tqdm()):
         """Writes snapshot file in VTK ImageData (.vtkhdf) format.
 
         Args:
@@ -279,7 +269,7 @@ class Snapshot(Generic[GridType]):
                     f.add_cell_data(key, self.snapfields[key])
                     pbar.update(n=self.snapfields[key].nbytes)
 
-    def write_hdf5(self, pbar: tqdm):
+    def write_hdf5(self, pbar: tqdm = tqdm()):
         """Writes snapshot file in HDF5 (.h5) format.
 
         Args:
@@ -306,6 +296,7 @@ class Snapshot(Generic[GridType]):
         for key in ["Ex", "Ey", "Ez", "Hx", "Hy", "Hz"]:
             if self.outputs[key]:
                 self.snapfields[key] = None
+                self.outputs[key] = False
 
 
 class MPISnapshot(Snapshot[MPIGrid]):
