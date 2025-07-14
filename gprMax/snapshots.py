@@ -75,7 +75,6 @@ class Snapshot(Generic[GridType]):
         "Ex": None,
         "Ey": None,
         "Ez": None,
-        "magE": None,
         "Hx": None,
         "Hy": None,
         "Hz": None,
@@ -220,7 +219,6 @@ class Snapshot(Generic[GridType]):
             self.outputs["Ex"],
             self.outputs["Ey"],
             self.outputs["Ez"],
-            self.outputs["magE"],
             self.outputs["Hx"],
             self.outputs["Hy"],
             self.outputs["Hz"],
@@ -233,7 +231,6 @@ class Snapshot(Generic[GridType]):
             self.snapfields["Ex"],
             self.snapfields["Ey"],
             self.snapfields["Ez"],
-            self.snapfields["magE"],
             self.snapfields["Hx"],
             self.snapfields["Hy"],
             self.snapfields["Hz"],
@@ -270,7 +267,7 @@ class Snapshot(Generic[GridType]):
         spacing = self.grid_view.step * self.grid.dl
 
         with VtkImageData(self.filename, self.grid_view.size, origin, spacing) as f:
-            for key in ["Ex", "Ey", "Ez", "magE", "Hx", "Hy", "Hz"]:
+            for key in ["Ex", "Ey", "Ez", "Hx", "Hy", "Hz"]:
                 if self.outputs[key]:
                     f.add_cell_data(key, self.snapfields[key])
                     pbar.update(n=self.snapfields[key].nbytes)
@@ -290,7 +287,7 @@ class Snapshot(Generic[GridType]):
         f.attrs["dx_dy_dz"] = self.grid_view.step * self.grid.dl
         f.attrs["time"] = self.time * self.grid.dt
 
-        for key in ["Ex", "Ey", "Ez", "magE", "Hx", "Hy", "Hz"]:
+        for key in ["Ex", "Ey", "Ez", "Hx", "Hy", "Hz"]:
             if self.outputs[key]:
                 f[key] = self.snapfields[key]
                 pbar.update(n=self.snapfields[key].nbytes)
@@ -299,7 +296,7 @@ class Snapshot(Generic[GridType]):
 
     def free_memory(self):
         # Free memory after write
-        for key in ["Ex", "Ey", "Ez", "magE", "Hx", "Hy", "Hz"]:
+        for key in ["Ex", "Ey", "Ez", "Hx", "Hy", "Hz"]:
             if self.outputs[key]:
                 self.snapfields[key] = None
                 self.outputs[key] = False
@@ -522,7 +519,6 @@ class MPISnapshot(Snapshot[MPIGrid]):
             self.snapfields["Ex"],
             self.snapfields["Ey"],
             self.snapfields["Ez"],
-            self.snapfields["magE"],
             self.snapfields["Hx"],
             self.snapfields["Hy"],
             self.snapfields["Hz"],
@@ -542,7 +538,7 @@ class MPISnapshot(Snapshot[MPIGrid]):
         with VtkImageData(
             self.filename, self.grid_view.global_size, origin, spacing, comm=self.comm
         ) as f:
-            for key in ["Ex", "Ey", "Ez", "magE", "Hx", "Hy", "Hz"]:
+            for key in ["Ex", "Ey", "Ez", "Hx", "Hy", "Hz"]:
                 if self.outputs.get(key):
                     f.add_cell_data(key, self.snapfields[key], self.grid_view.offset)
                     pbar.update(n=self.snapfields[key].nbytes)
@@ -566,7 +562,7 @@ class MPISnapshot(Snapshot[MPIGrid]):
 
         dset_slice = self.grid_view.get_3d_output_slice()
 
-        for key in ["Ex", "Ey", "Ez", "magE", "Hx", "Hy", "Hz"]:
+        for key in ["Ex", "Ey", "Ez", "Hx", "Hy", "Hz"]:
             if self.outputs[key]:
                 dset = f.create_dataset(key, self.grid_view.global_size)
                 dset[dset_slice] = self.snapfields[key]
