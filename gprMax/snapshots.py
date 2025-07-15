@@ -353,6 +353,7 @@ class MPISnapshot(Snapshot[MPIGrid]):
             G: FDTDGrid class describing a grid in a model.
         """
 
+
         logger.debug(f"Saving snapshot for iteration: {self.time}")
 
         # Memory views of field arrays to dimensions required for the snapshot
@@ -500,6 +501,8 @@ class MPISnapshot(Snapshot[MPIGrid]):
             Exslice = np.concatenate((Exslice, Exzhalo), axis=Dim.Z)
             Hzslice = np.concatenate((Hzslice, Hzhalo), axis=Dim.Z)
 
+        self.initialise_snapfields()
+
         # Calculate field values at points (comes from averaging field
         # components in cells)
         calculate_snapshot_fields(
@@ -510,6 +513,7 @@ class MPISnapshot(Snapshot[MPIGrid]):
             self.outputs["Ex"],
             self.outputs["Ey"],
             self.outputs["Ez"],
+            self.outputs["magE"],
             self.outputs["Hx"],
             self.outputs["Hy"],
             self.outputs["Hz"],
