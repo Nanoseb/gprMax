@@ -462,10 +462,10 @@ class Model:
         if self.G.rxs or sg_rxs or self.G.transmissionlines or sg_tls:
             write_hdf5_outputfile(config.get_model_config().output_file_path_ext, self.title, self)
 
-        # Write any snapshots to file for each grid
-        for grid in [self.G] + self.subgrids:
-            if grid.snapshots:
-                save_snapshots(grid.snapshots)
+        # # Write any snapshots to file for each grid
+        # for grid in [self.G] + self.subgrids:
+        #     if grid.snapshots:
+        #         save_snapshots(grid.snapshots)
 
     def solve(self, solver):
         """Solve using FDTD method.

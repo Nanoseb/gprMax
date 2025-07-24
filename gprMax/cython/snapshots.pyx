@@ -30,6 +30,7 @@ cpdef void calculate_snapshot_fields(
     bint isEx,
     bint isEy,
     bint isEz,
+    bint ismagE,
     bint isHx,
     bint isHy,
     bint isHz,
@@ -42,6 +43,7 @@ cpdef void calculate_snapshot_fields(
     float_or_double[:, :, ::1] Exsnap,
     float_or_double[:, :, ::1] Eysnap,
     float_or_double[:, :, ::1] Ezsnap,
+    float_or_double[:, :, ::1] magEsnap,
     float_or_double[:, :, ::1] Hxsnap,
     float_or_double[:, :, ::1] Hysnap,
     float_or_double[:, :, ::1] Hzsnap
@@ -58,6 +60,7 @@ cpdef void calculate_snapshot_fields(
     """
 
     cdef Py_ssize_t i, j, k
+    cdef float_or_double Ex, Ey, Ez
 
     for i in prange(0, nx, nogil=True, schedule='static', num_threads=nthreads):
         for j in range(ny):
@@ -79,6 +82,22 @@ cpdef void calculate_snapshot_fields(
                                        Ezslice[i + 1, j, k] +
                                        Ezslice[i, j + 1, k] +
                                        Ezslice[i + 1, j + 1, k]) / 4
+
+                if ismagE:
+                    Ex = (Exslice[i, j, k] +
+                          Exslice[i, j + 1, k] +
+                          Exslice[i, j, k + 1] +
+                          Exslice[i, j + 1, k + 1]) / 4
+                    Ey = (Eyslice[i, j, k] +
+                          Eyslice[i + 1, j, k] +
+                          Eyslice[i, j, k + 1] +
+                          Eyslice[i + 1, j, k + 1]) / 4
+                    Ez = (Ezslice[i, j, k] +
+                          Ezslice[i + 1, j, k] +
+                          Ezslice[i, j + 1, k] +
+                          Ezslice[i + 1, j + 1, k]) / 4
+ 
+                    magEsnap[i,j,k] = Ex*Ex + Ey*Ey + Ez*Ez
 
                 # The magnetic field component value at a point comes from
                 # average of 2 magnetic field component values in that cell and

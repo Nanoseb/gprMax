@@ -49,12 +49,10 @@ def save_snapshots(snapshots: List["Snapshot"]):
 
     # Create directory for snapshots
     snapshotdir = config.get_model_config().set_snapshots_dir()
-    snapshotdir.mkdir(exist_ok=True)
     logger.info("")
     logger.info(f"Snapshot directory: {snapshotdir.resolve()}")
 
     for i, snap in enumerate(snapshots):
-        snap.filename = snapshotdir / snap.filename
         pbar = tqdm(
             total=snap.nbytes,
             leave=True,
@@ -77,6 +75,7 @@ class Snapshot(Generic[GridType]):
         "Ex": None,
         "Ey": None,
         "Ez": None,
+        "magE": None,
         "Hx": None,
         "Hy": None,
         "Hz": None,
@@ -201,6 +200,8 @@ class Snapshot(Generic[GridType]):
             G: FDTDGrid class describing a grid in a model.
         """
 
+        self.initialise_snapfields()
+
         # Memory views of field arrays to dimensions required for the snapshot
         Exslice = self.grid_view.get_Ex()
         Eyslice = self.grid_view.get_Ey()
@@ -219,6 +220,7 @@ class Snapshot(Generic[GridType]):
             self.outputs["Ex"],
             self.outputs["Ey"],
             self.outputs["Ez"],
+            self.outputs["magE"],
             self.outputs["Hx"],
             self.outputs["Hy"],
             self.outputs["Hz"],
@@ -231,12 +233,13 @@ class Snapshot(Generic[GridType]):
             self.snapfields["Ex"],
             self.snapfields["Ey"],
             self.snapfields["Ez"],
+            self.snapfields["magE"],
             self.snapfields["Hx"],
             self.snapfields["Hy"],
             self.snapfields["Hz"],
         )
 
-    def write_file(self, pbar: tqdm):
+    def write_file(self, pbar: tqdm = tqdm()):
         """Writes snapshot file either as VTK ImageData (.vtkhdf) format
             or HDF5 format (.h5) files
 
@@ -244,13 +247,19 @@ class Snapshot(Generic[GridType]):
             pbar: Progress bar class instance.
             G: FDTDGrid class describing a grid in a model.
         """
+        snapshotdir = config.get_model_config().set_snapshots_dir()
+        snapshotdir.mkdir(exist_ok=True)
+        self.filename = snapshotdir / self.filename
 
         if self.fileext == ".vtkhdf":
             self.write_vtk(pbar)
         elif self.fileext == ".h5":
             self.write_hdf5(pbar)
 
-    def write_vtk(self, pbar: tqdm):
+        # Free memory after writes
+        self.free_memory()
+
+    def write_vtk(self, pbar: tqdm = tqdm()):
         """Writes snapshot file in VTK ImageData (.vtkhdf) format.
 
         Args:
@@ -261,12 +270,12 @@ class Snapshot(Generic[GridType]):
         spacing = self.grid_view.step * self.grid.dl
 
         with VtkImageData(self.filename, self.grid_view.size, origin, spacing) as f:
-            for key in ["Ex", "Ey", "Ez", "Hx", "Hy", "Hz"]:
+            for key in ["Ex", "Ey", "Ez", "magE", "Hx", "Hy", "Hz"]:
                 if self.outputs[key]:
                     f.add_cell_data(key, self.snapfields[key])
                     pbar.update(n=self.snapfields[key].nbytes)
 
-    def write_hdf5(self, pbar: tqdm):
+    def write_hdf5(self, pbar: tqdm = tqdm()):
         """Writes snapshot file in HDF5 (.h5) format.
 
         Args:
@@ -281,12 +290,19 @@ class Snapshot(Generic[GridType]):
         f.attrs["dx_dy_dz"] = self.grid_view.step * self.grid.dl
         f.attrs["time"] = self.time * self.grid.dt
 
-        for key in ["Ex", "Ey", "Ez", "Hx", "Hy", "Hz"]:
+        for key in ["Ex", "Ey", "Ez", "magE", "Hx", "Hy", "Hz"]:
             if self.outputs[key]:
                 f[key] = self.snapfields[key]
                 pbar.update(n=self.snapfields[key].nbytes)
 
         f.close()
+
+    def free_memory(self):
+        # Free memory after write
+        for key in ["Ex", "Ey", "Ez", "magE", "Hx", "Hy", "Hz"]:
+            if self.outputs[key]:
+                self.snapfields[key] = None
+                self.outputs[key] = False
 
 
 class MPISnapshot(Snapshot[MPIGrid]):
@@ -336,6 +352,7 @@ class MPISnapshot(Snapshot[MPIGrid]):
         Args:
             G: FDTDGrid class describing a grid in a model.
         """
+
 
         logger.debug(f"Saving snapshot for iteration: {self.time}")
 
@@ -484,6 +501,8 @@ class MPISnapshot(Snapshot[MPIGrid]):
             Exslice = np.concatenate((Exslice, Exzhalo), axis=Dim.Z)
             Hzslice = np.concatenate((Hzslice, Hzhalo), axis=Dim.Z)
 
+        self.initialise_snapfields()
+
         # Calculate field values at points (comes from averaging field
         # components in cells)
         calculate_snapshot_fields(
@@ -494,6 +513,7 @@ class MPISnapshot(Snapshot[MPIGrid]):
             self.outputs["Ex"],
             self.outputs["Ey"],
             self.outputs["Ez"],
+            self.outputs["magE"],
             self.outputs["Hx"],
             self.outputs["Hy"],
             self.outputs["Hz"],
@@ -506,6 +526,7 @@ class MPISnapshot(Snapshot[MPIGrid]):
             self.snapfields["Ex"],
             self.snapfields["Ey"],
             self.snapfields["Ez"],
+            self.snapfields["magE"],
             self.snapfields["Hx"],
             self.snapfields["Hy"],
             self.snapfields["Hz"],
@@ -525,7 +546,7 @@ class MPISnapshot(Snapshot[MPIGrid]):
         with VtkImageData(
             self.filename, self.grid_view.global_size, origin, spacing, comm=self.comm
         ) as f:
-            for key in ["Ex", "Ey", "Ez", "Hx", "Hy", "Hz"]:
+            for key in ["Ex", "Ey", "Ez", "magE", "Hx", "Hy", "Hz"]:
                 if self.outputs.get(key):
                     f.add_cell_data(key, self.snapfields[key], self.grid_view.offset)
                     pbar.update(n=self.snapfields[key].nbytes)
@@ -549,7 +570,7 @@ class MPISnapshot(Snapshot[MPIGrid]):
 
         dset_slice = self.grid_view.get_3d_output_slice()
 
-        for key in ["Ex", "Ey", "Ez", "Hx", "Hy", "Hz"]:
+        for key in ["Ex", "Ey", "Ez", "magE", "Hx", "Hy", "Hz"]:
             if self.outputs[key]:
                 dset = f.create_dataset(key, self.grid_view.global_size)
                 dset[dset_slice] = self.snapfields[key]

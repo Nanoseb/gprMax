@@ -25,7 +25,7 @@ import gprMax.config as config
 class Rx:
     """Receiver output points."""
 
-    allowableoutputs = ["Ex", "Ey", "Ez", "Hx", "Hy", "Hz", "Ix", "Iy", "Iz"]
+    allowableoutputs = ["Ex", "Ey", "Ez", "magE", "Hx", "Hy", "Hz", "Ix", "Iy", "Iz"]
     defaultoutputs = allowableoutputs[:-3]
     allowableoutputs_dev = allowableoutputs[:-3]
 
